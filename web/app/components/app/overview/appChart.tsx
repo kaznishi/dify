@@ -1,6 +1,6 @@
 'use client'
 import type { FC } from 'react'
-import React from 'react'
+import React, { useMemo } from 'react'
 import ReactECharts from 'echarts-for-react'
 import type { EChartsOption } from 'echarts'
 import useSWR from 'swr'
@@ -11,8 +11,8 @@ import { useTranslation } from 'react-i18next'
 import { formatNumber } from '@/utils/format'
 import Basic from '@/app/components/app-sidebar/basic'
 import Loading from '@/app/components/base/loading'
-import type { AppDailyConversationsResponse, AppDailyEndUsersResponse, AppDailyMessagesResponse, AppTokenCostsResponse } from '@/models/app'
-import { getAppDailyConversations, getAppDailyEndUsers, getAppDailyMessages, getAppStatistics, getAppTokenCosts, getWorkflowDailyConversations } from '@/service/apps'
+import type { AppDailyConversationsResponse, AppDailyEndUsersResponse, AppDailyMessagesResponse, AppTokenCostsResponse, ModelUsageData, WorkflowTokenCostsByModelResponse } from '@/models/app'
+import { getAppDailyConversations, getAppDailyEndUsers, getAppDailyMessages, getAppStatistics, getAppTokenCosts, getWorkflowDailyConversations, getWorkflowTokenCostsByModel } from '@/service/apps'
 const valueFormatter = (v: string | number) => v
 
 const COLOR_TYPE_MAP = {
@@ -445,6 +445,198 @@ export const AvgUserInteractions: FC<IBizChartProps> = ({ id, period }) => {
     isAvg
     {...(noDataFlag && { yMax: 500 })}
   />
+}
+
+export const WorkflowCostByModelChart: FC<IBizChartProps> = ({ id, period }) => {
+  const { t } = useTranslation()
+
+  const { data: response } = useSWR(
+    { url: `/apps/${id}/workflow/statistics/token-costs-by-model`, params: period.query },
+    getWorkflowTokenCostsByModel,
+  )
+
+  // データをモデル別に整理
+  const processModelData = (data: WorkflowTokenCostsByModelResponse['data']): ModelUsageData[] => {
+    const modelMap = new Map<string, ModelUsageData>()
+    const colors = ['#FF8A4C', '#1C64F2', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4']
+    let colorIndex = 0
+
+    data.forEach((item) => {
+      const modelKey = `${item.model_provider}/${item.model_id}`
+
+      if (!modelMap.has(modelKey)) {
+        modelMap.set(modelKey, {
+          modelKey,
+          model_provider: item.model_provider,
+          model_id: item.model_id,
+          color: colors[colorIndex % colors.length],
+          data: [],
+        })
+        colorIndex++
+      }
+
+      modelMap.get(modelKey)!.data.push({
+        date: item.date,
+        token_count: item.token_count,
+      })
+    })
+
+    return Array.from(modelMap.values())
+  }
+
+  // EChartsオプション（スタック型エリアチャート）
+  const chartOptions = useMemo(() => {
+    if (!response?.data) return {}
+
+    const modelData = processModelData(response.data)
+    const allDates = [...new Set(response.data.map(item => item.date))].sort()
+
+    return {
+      dataset: {
+        source: response.data,
+      },
+      grid: { top: 40, right: 36, bottom: 60, left: 60, containLabel: true },
+      tooltip: {
+        trigger: 'axis',
+        axisPointer: { type: 'cross' },
+        formatter: (params: any) => {
+          let content = `<div style='color:#6B7280;font-size:12px;margin-bottom:4px'>${params[0].name}</div>`
+
+          let totalTokens = 0
+
+          params.forEach((param: any) => {
+            const tokenCount = param.data.token_count || 0
+            totalTokens += tokenCount
+
+            content += `
+              <div style='margin-bottom:2px'>
+                <span style='display:inline-block;width:10px;height:10px;background:${param.color};margin-right:8px'></span>
+                <span style='color:#1F2A37'>${param.seriesName}</span>
+                <span style='float:right;margin-left:20px;color:#1F2A37'>${tokenCount.toLocaleString()} tokens</span>
+              </div>
+            `
+          })
+
+          content += `
+            <div style='border-top:1px solid #E5E7EB;margin-top:8px;padding-top:4px'>
+              <span style='color:#1F2A37;font-weight:500'>Total: ${totalTokens.toLocaleString()} tokens</span>
+            </div>
+          `
+
+          return content
+        },
+      },
+      legend: {
+        data: modelData.map(model => `${model.model_provider}/${model.model_id}`),
+        bottom: 0,
+        type: 'scroll',
+      },
+      xAxis: {
+        type: 'category',
+        data: allDates,
+        axisLabel: {
+          color: COMMON_COLOR_MAP.label,
+          formatter: (value: string) => dayjs(value).format('MMM D'),
+        },
+        axisLine: { show: false },
+        axisTick: { show: false },
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: {
+          color: COMMON_COLOR_MAP.label,
+          formatter: (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : value.toString(),
+        },
+        splitLine: {
+          lineStyle: { color: COMMON_COLOR_MAP.splitLineLight },
+        },
+      },
+      series: modelData.map(model => ({
+        name: `${model.model_provider}/${model.model_id}`,
+        type: 'line',
+        stack: 'tokens',
+        areaStyle: { opacity: 0.6 },
+        lineStyle: { width: 2, color: model.color },
+        itemStyle: { color: model.color },
+        data: allDates.map((date) => {
+          const item = model.data.find(d => d.date === date)
+          return {
+            value: item ? item.token_count : 0,
+            token_count: item ? item.token_count : 0,
+            date,
+            model_provider: model.model_provider,
+            model_id: model.model_id,
+          }
+        }),
+      })),
+    }
+  }, [response])
+
+  if (!response)
+    return <Loading />
+
+  const noDataFlag = !response.data || response.data.length === 0
+
+  // 合計統計の計算
+  const totalTokens = response.data.reduce((sum, item) => sum + item.token_count, 0)
+
+  if (noDataFlag) {
+    return <Chart
+      basicInfo={{
+        title: t('appOverview.analysis.tokenUsageByModel.title'),
+        explanation: t('appOverview.analysis.tokenUsageByModel.explanation'),
+        timePeriod: period.name,
+      }}
+      chartData={{ data: getDefaultChartData(period.query ?? defaultPeriod) }}
+      chartType='workflowCosts'
+      yMax={100}
+    />
+  }
+
+  return (
+    <div className="flex w-full flex-col rounded-xl bg-components-chart-bg px-6 py-4 shadow-xs">
+      <div className='mb-3'>
+        <Basic
+          name={t('appOverview.analysis.tokenUsageByModel.title')}
+          type={period.name}
+          hoverTip={t('appOverview.analysis.tokenUsageByModel.explanation')}
+        />
+      </div>
+
+      <div className='mb-4 flex-1'>
+        <Basic
+          name={`${totalTokens.toLocaleString()} tokens`}
+          type={period.name}
+          textStyle={{ main: `!text-3xl !font-normal ${totalTokens === 0 ? '!text-text-quaternary' : ''}` }}
+        />
+      </div>
+
+      <ReactECharts option={chartOptions} style={{ height: 200 }} />
+
+      {/* モデル別サマリー */}
+      <div className="mt-4 space-y-2">
+        {processModelData(response.data).slice(0, 5).map((model) => {
+          const modelTotal = model.data.reduce((sum, item) => sum + item.token_count, 0)
+          const percentage = totalTokens > 0 ? (modelTotal / totalTokens * 100).toFixed(1) : '0'
+
+          return (
+            <div key={model.modelKey} className="flex items-center justify-between text-sm">
+              <div className="flex items-center">
+                <div
+                  className="mr-2 h-3 w-3 rounded"
+                  style={{ backgroundColor: model.color }}
+                />
+                <span className="text-text-secondary">{model.model_id}</span>
+              </div>
+              <div className="text-text-primary">
+                {modelTotal.toLocaleString()} tokens ({percentage}%)
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 export default Chart
