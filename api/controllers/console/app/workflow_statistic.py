@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from decimal import Decimal
 
@@ -299,23 +300,44 @@ class WorkflowTokenCostByModelStatistic(Resource):
         parser.add_argument("end", type=DatetimeString("%Y-%m-%d %H:%M"), location="args")
         args = parser.parse_args()
 
-        # メッセージテーブルからワークフロー関連のモデル別統計を取得
+        # workflow_node_executionsテーブルからモデル別統計を取得
         sql_query = """SELECT
-    DATE(DATE_TRUNC('day', created_at AT TIME ZONE 'UTC' AT TIME ZONE :tz )) AS date,
-    model_provider,
-    model_id,
-    SUM(message_tokens + answer_tokens) AS token_count,
-    SUM(total_price) AS total_price,
+    DATE(DATE_TRUNC('day', wne.created_at AT TIME ZONE 'UTC' AT TIME ZONE :tz )) AS date,
+    COALESCE(
+        wne.process_data::json->>'model_provider',
+        'unknown'
+    ) AS model_provider,
+    COALESCE(
+        wne.process_data::json->>'model_name',
+        'unknown'
+    ) AS model_id,
+    SUM(
+        COALESCE(
+            (wne.execution_metadata::json->>'total_tokens')::integer,
+            0
+        )
+    ) AS token_count,
+    SUM(
+        COALESCE(
+            (wne.execution_metadata::json->>'total_price')::decimal,
+            0
+        )
+    ) AS total_price,
     'USD' as currency
 FROM
-    messages
+    workflow_node_executions wne
+    INNER JOIN workflow_runs wr ON wne.workflow_run_id = wr.id
 WHERE
-    app_id = :app_id
-    AND workflow_run_id IS NOT NULL"""
+    wne.app_id = :app_id
+    AND wr.triggered_from = :triggered_from
+    AND wne.execution_metadata IS NOT NULL
+    AND wne.process_data IS NOT NULL
+    AND wne.node_type = 'llm'"""
 
         arg_dict = {
             "tz": account.timezone,
             "app_id": app_model.id,
+            "triggered_from": WorkflowRunTriggeredFrom.APP_RUN.value,
         }
 
         timezone = pytz.timezone(account.timezone)
@@ -326,7 +348,7 @@ WHERE
             start_datetime = start_datetime.replace(second=0)
             start_datetime_timezone = timezone.localize(start_datetime)
             start_datetime_utc = start_datetime_timezone.astimezone(utc_timezone)
-            sql_query += " AND created_at >= :start"
+            sql_query += " AND wne.created_at >= :start"
             arg_dict["start"] = start_datetime_utc
 
         if args["end"]:
@@ -334,23 +356,36 @@ WHERE
             end_datetime = end_datetime.replace(second=0)
             end_datetime_timezone = timezone.localize(end_datetime)
             end_datetime_utc = end_datetime_timezone.astimezone(utc_timezone)
-            sql_query += " AND created_at < :end"
+            sql_query += " AND wne.created_at < :end"
             arg_dict["end"] = end_datetime_utc
 
         sql_query += " GROUP BY date, model_provider, model_id ORDER BY date, model_provider, model_id"
 
+        # ログでSQLクエリとパラメータを確認
+        logging.info(f"[WorkflowTokenCostByModelStatistic] SQL Query: {sql_query}")
+        logging.info(f"[WorkflowTokenCostByModelStatistic] Query Args: {arg_dict}")
+
         response_data = []
         with db.engine.begin() as conn:
             rs = conn.execute(db.text(sql_query), arg_dict)
+            result_count = 0
             for i in rs:
-                response_data.append({
+                result_count += 1
+                row_data = {
                     "date": str(i.date),
                     "model_provider": i.model_provider,
                     "model_id": i.model_id,
                     "token_count": i.token_count or 0,
                     "total_price": float(i.total_price or 0),
                     "currency": i.currency
-                })
+                }
+                response_data.append(row_data)
+                # 最初の5行だけログに出力（データが多い場合のため）
+                if result_count <= 5:
+                    logging.info(f"[WorkflowTokenCostByModelStatistic] Row {result_count}: {row_data}")
+            
+            logging.info(f"[WorkflowTokenCostByModelStatistic] Total rows returned: {result_count}")
+            logging.info(f"[WorkflowTokenCostByModelStatistic] Response data length: {len(response_data)}")
 
         return jsonify({"data": response_data})
 
