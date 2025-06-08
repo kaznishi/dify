@@ -4,23 +4,23 @@
 
 WorkflowCostByModelChart機能の実装を段階的に進めるためのTODOリストです。各フェーズごとに優先度を設定し、効率的な実装順序を定義しています。
 
-## Phase 1: API実装（バックエンド）
+## Phase 1: API実装（バックエンド） ✅ 完了
 
 ### 🔴 高優先度
 
-- [ ] **API側: WorkflowTokenCostByModelStatistic エンドポイントを /api/controllers/console/app/workflow_statistic.py に実装**
+- [x] **API側: WorkflowTokenCostByModelStatistic エンドポイントを /api/controllers/console/app/workflow_statistic.py に実装** ✅
   - 新しいクラス `WorkflowTokenCostByModelStatistic(Resource)` を追加
   - メッセージテーブルからワークフロー関連のモデル別統計を取得するSQLクエリを実装
   - 日付範囲フィルタリング（start/end パラメータ）を実装
   - タイムゾーン対応の日付処理を実装
 
-- [ ] **API側: /api/controllers/console/app/workflow_statistic.py にルート登録を追加**
+- [x] **API側: /api/controllers/console/app/workflow_statistic.py にルート登録を追加** ✅
   - ファイル末尾に `api.add_resource(WorkflowTokenCostByModelStatistic, "/apps/<uuid:app_id>/workflow/statistics/token-costs-by-model")` を追加
   - 既存のルート登録（289-294行目）の後に追加
 
 ### 🟡 中優先度
 
-- [ ] **API側: /api/models/model.py と /api/models/workflow.py でテーブル構造確認**
+- [x] **API側: /api/models/model.py と /api/models/workflow.py でテーブル構造確認** ✅
   - Message モデルの `model_provider`, `model_id`, `workflow_run_id`, `message_tokens`, `answer_tokens`, `total_price` フィールド確認
   - ワークフロー関連のリレーションシップ確認
 

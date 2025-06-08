@@ -286,9 +286,79 @@ GROUP BY
         return jsonify({"data": response_data})
 
 
+class WorkflowTokenCostByModelStatistic(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    @get_app_model(mode=[AppMode.WORKFLOW])
+    def get(self, app_model):
+        account = current_user
+
+        parser = reqparse.RequestParser()
+        parser.add_argument("start", type=DatetimeString("%Y-%m-%d %H:%M"), location="args")
+        parser.add_argument("end", type=DatetimeString("%Y-%m-%d %H:%M"), location="args")
+        args = parser.parse_args()
+
+        # メッセージテーブルからワークフロー関連のモデル別統計を取得
+        sql_query = """SELECT
+    DATE(DATE_TRUNC('day', created_at AT TIME ZONE 'UTC' AT TIME ZONE :tz )) AS date,
+    model_provider,
+    model_id,
+    SUM(message_tokens + answer_tokens) AS token_count,
+    SUM(total_price) AS total_price,
+    'USD' as currency
+FROM
+    messages
+WHERE
+    app_id = :app_id
+    AND workflow_run_id IS NOT NULL"""
+
+        arg_dict = {
+            "tz": account.timezone,
+            "app_id": app_model.id,
+        }
+
+        timezone = pytz.timezone(account.timezone)
+        utc_timezone = pytz.utc
+
+        if args["start"]:
+            start_datetime = datetime.strptime(args["start"], "%Y-%m-%d %H:%M")
+            start_datetime = start_datetime.replace(second=0)
+            start_datetime_timezone = timezone.localize(start_datetime)
+            start_datetime_utc = start_datetime_timezone.astimezone(utc_timezone)
+            sql_query += " AND created_at >= :start"
+            arg_dict["start"] = start_datetime_utc
+
+        if args["end"]:
+            end_datetime = datetime.strptime(args["end"], "%Y-%m-%d %H:%M")
+            end_datetime = end_datetime.replace(second=0)
+            end_datetime_timezone = timezone.localize(end_datetime)
+            end_datetime_utc = end_datetime_timezone.astimezone(utc_timezone)
+            sql_query += " AND created_at < :end"
+            arg_dict["end"] = end_datetime_utc
+
+        sql_query += " GROUP BY date, model_provider, model_id ORDER BY date, model_provider, model_id"
+
+        response_data = []
+        with db.engine.begin() as conn:
+            rs = conn.execute(db.text(sql_query), arg_dict)
+            for i in rs:
+                response_data.append({
+                    "date": str(i.date),
+                    "model_provider": i.model_provider,
+                    "model_id": i.model_id,
+                    "token_count": i.token_count or 0,
+                    "total_price": float(i.total_price or 0),
+                    "currency": i.currency
+                })
+
+        return jsonify({"data": response_data})
+
+
 api.add_resource(WorkflowDailyRunsStatistic, "/apps/<uuid:app_id>/workflow/statistics/daily-conversations")
 api.add_resource(WorkflowDailyTerminalsStatistic, "/apps/<uuid:app_id>/workflow/statistics/daily-terminals")
 api.add_resource(WorkflowDailyTokenCostStatistic, "/apps/<uuid:app_id>/workflow/statistics/token-costs")
 api.add_resource(
     WorkflowAverageAppInteractionStatistic, "/apps/<uuid:app_id>/workflow/statistics/average-app-interactions"
 )
+api.add_resource(WorkflowTokenCostByModelStatistic, "/apps/<uuid:app_id>/workflow/statistics/token-costs-by-model")
