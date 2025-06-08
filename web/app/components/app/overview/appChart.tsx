@@ -560,7 +560,13 @@ export const WorkflowCostByModelChart: FC<IBizChartProps> = ({ id, period }) => 
         itemStyle: { color: model.color },
         data: allDates.map((date) => {
           const item = model.data.find(d => d.date === date)
-          return item ? item.token_count : 0
+          return {
+            value: item ? item.token_count : 0,
+            token_count: item ? item.token_count : 0,
+            date,
+            model_provider: model.model_provider,
+            model_id: model.model_id,
+          }
         }),
       })),
     }
