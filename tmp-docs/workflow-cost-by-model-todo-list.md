@@ -38,11 +38,11 @@ WorkflowCostByModelChart機能の実装を段階的に進めるためのTODOリ�
   - 型安全性の確保
   - エラーハンドリングの実装
 
-## Phase 3: コンポーネント実装
+## Phase 3: コンポーネント実装 ✅ 完了
 
 ### 🔴 高優先度
 
-- [ ] **フロントエンド: /web/app/components/app/overview/appChart.tsx に WorkflowCostByModelChart コンポーネントを実装**
+- [x] **フロントエンド: /web/app/components/app/overview/appChart.tsx に WorkflowCostByModelChart コンポーネントを実装** ✅
   - SWR を使用したデータフェッチング
   - モデル別データ処理ロジック（`processModelData` 関数）
   - ECharts を使用したスタック型エリアチャートの実装
@@ -52,31 +52,31 @@ WorkflowCostByModelChart機能の実装を段階的に進めるためのTODOリ�
 
 ### 🟡 中優先度
 
-- [ ] **フロントエンド: appChart.tsx の依存関係とインポートを確認・調整**
+- [x] **フロントエンド: appChart.tsx の依存関係とインポートを確認・調整** ✅
   - 必要なライブラリのインポート（React, useMemo, SWR, ECharts等）
   - 既存のコンポーネント（Loading, Basic, Chart等）の利用確認
   - COMMON_COLOR_MAP などの定数の利用確認
   - dayjs の日付フォーマット確認
 
-## Phase 4: 統合
+## Phase 4: 統合 ✅ 完了
 
 ### 🔴 高優先度
 
-- [ ] **フロントエンド: /web/app/(commonLayout)/app/(appDetailLayout)/[appId]/overview/chartView.tsx に新しいチャートを統合**
+- [x] **フロントエンド: /web/app/(commonLayout)/app/(appDetailLayout)/[appId]/overview/chartView.tsx に新しいチャートを統合** ✅
   - `WorkflowCostByModelChart` コンポーネントのインポート追加
   - ワークフロー統計セクションへの組み込み
   - グリッドレイアウトの調整（xl:grid-cols-2 での並列表示）
   - 既存の `WorkflowCostChart` との配置調整
 
-## Phase 5: 国際化
+## Phase 5: 国際化 ✅ 完了
 
 ### 🟡 中優先度
 
-- [ ] **国際化: /web/i18n/ja-JP/app-overview.ts に tokenUsageByModel セクションを追加**
+- [x] **国際化: /web/i18n/ja-JP/app-overview.ts に tokenUsageByModel セクションを追加** ✅
   - `analysis.tokenUsageByModel.title`: 'モデル別トークン使用量'
   - `analysis.tokenUsageByModel.explanation`: 'ワークフロー実行時に使用された各LLMモデルのトークン数と費用を表示します。'
 
-- [ ] **国際化: /web/i18n/en-US/app-overview.ts に tokenUsageByModel セクションを追加**
+- [x] **国際化: /web/i18n/en-US/app-overview.ts に tokenUsageByModel セクションを追加** ✅
   - `analysis.tokenUsageByModel.title`: 'Token Usage by Model'
   - `analysis.tokenUsageByModel.explanation`: 'Shows token count and cost for each LLM model used during workflow execution.'
 

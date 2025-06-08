@@ -167,6 +167,10 @@ const translation = {
       title: 'Token Output Speed',
       explanation: 'Measure the performance of the LLM. Count the Tokens output speed of LLM from the beginning of the request to the completion of the output.',
     },
+    tokenUsageByModel: {
+      title: 'Token Usage by Model',
+      explanation: 'Shows token count and cost for each LLM model used during workflow execution.',
+    },
   },
 }
 

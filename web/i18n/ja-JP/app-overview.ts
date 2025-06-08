@@ -167,6 +167,10 @@ const translation = {
       title: 'トークン出力速度',
       explanation: 'LLMのパフォーマンスを測定します。リクエストの開始から出力の完了までのLLMのトークン出力速度を数えます。',
     },
+    tokenUsageByModel: {
+      title: 'モデル別トークン使用量',
+      explanation: 'ワークフロー実行時に使用された各LLMモデルのトークン数と費用を表示します。',
+    },
   },
 }
 
