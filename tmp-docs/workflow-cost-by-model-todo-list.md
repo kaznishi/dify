@@ -14,9 +14,9 @@ WorkflowCostByModelChart機能の実装を段階的に進めるためのTODOリ�
   - 日付範囲フィルタリング（start/end パラメータ）を実装
   - タイムゾーン対応の日付処理を実装
 
-- [ ] **API側: /api/controllers/console/app/__init__.py にルート登録を追加**
-  - `api.add_resource(WorkflowTokenCostByModelStatistic, "/apps/<uuid:app_id>/workflow/statistics/token-costs-by-model")` を追加
-  - インポート文の追加
+- [ ] **API側: /api/controllers/console/app/workflow_statistic.py にルート登録を追加**
+  - ファイル末尾に `api.add_resource(WorkflowTokenCostByModelStatistic, "/apps/<uuid:app_id>/workflow/statistics/token-costs-by-model")` を追加
+  - 既存のルート登録（289-294行目）の後に追加
 
 ### 🟡 中優先度
 
