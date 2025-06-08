@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 from decimal import Decimal
 
@@ -316,14 +315,7 @@ class WorkflowTokenCostByModelStatistic(Resource):
             (wne.execution_metadata::json->>'total_tokens')::integer,
             0
         )
-    ) AS token_count,
-    SUM(
-        COALESCE(
-            (wne.execution_metadata::json->>'total_price')::decimal,
-            0
-        )
-    ) AS total_price,
-    'USD' as currency
+    ) AS token_count
 FROM
     workflow_node_executions wne
     INNER JOIN workflow_runs wr ON wne.workflow_run_id = wr.id
@@ -361,32 +353,18 @@ WHERE
 
         sql_query += " GROUP BY date, model_provider, model_id ORDER BY date, model_provider, model_id"
 
-        # ログでSQLクエリとパラメータを確認
-        logging.info(f"[WorkflowTokenCostByModelStatistic] SQL Query: {sql_query}")
-        logging.info(f"[WorkflowTokenCostByModelStatistic] Query Args: {arg_dict}")
-
         response_data = []
         with db.engine.begin() as conn:
             rs = conn.execute(db.text(sql_query), arg_dict)
-            result_count = 0
             for i in rs:
-                result_count += 1
                 row_data = {
                     "date": str(i.date),
                     "model_provider": i.model_provider,
                     "model_id": i.model_id,
-                    "token_count": i.token_count or 0,
-                    "total_price": float(i.total_price or 0),
-                    "currency": i.currency
+                    "token_count": i.token_count or 0
                 }
                 response_data.append(row_data)
-                # 最初の5行だけログに出力（データが多い場合のため）
-                if result_count <= 5:
-                    logging.info(f"[WorkflowTokenCostByModelStatistic] Row {result_count}: {row_data}")
             
-            logging.info(f"[WorkflowTokenCostByModelStatistic] Total rows returned: {result_count}")
-            logging.info(f"[WorkflowTokenCostByModelStatistic] Response data length: {len(response_data)}")
-
         return jsonify({"data": response_data})
 
 

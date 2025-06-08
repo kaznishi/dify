@@ -478,7 +478,6 @@ export const WorkflowCostByModelChart: FC<IBizChartProps> = ({ id, period }) => 
       modelMap.get(modelKey)!.data.push({
         date: item.date,
         token_count: item.token_count,
-        total_price: item.total_price,
       })
     })
 
@@ -504,13 +503,10 @@ export const WorkflowCostByModelChart: FC<IBizChartProps> = ({ id, period }) => 
           let content = `<div style='color:#6B7280;font-size:12px;margin-bottom:4px'>${params[0].name}</div>`
 
           let totalTokens = 0
-          let totalPrice = 0
 
           params.forEach((param: any) => {
             const tokenCount = param.data.token_count || 0
-            const price = param.data.total_price || 0
             totalTokens += tokenCount
-            totalPrice += price
 
             content += `
               <div style='margin-bottom:2px'>
@@ -523,7 +519,7 @@ export const WorkflowCostByModelChart: FC<IBizChartProps> = ({ id, period }) => 
 
           content += `
             <div style='border-top:1px solid #E5E7EB;margin-top:8px;padding-top:4px'>
-              <span style='color:#1F2A37;font-weight:500'>Total: ${totalTokens.toLocaleString()} tokens (~$${totalPrice.toFixed(4)})</span>
+              <span style='color:#1F2A37;font-weight:500'>Total: ${totalTokens.toLocaleString()} tokens</span>
             </div>
           `
 
@@ -577,7 +573,6 @@ export const WorkflowCostByModelChart: FC<IBizChartProps> = ({ id, period }) => 
 
   // 合計統計の計算
   const totalTokens = response.data.reduce((sum, item) => sum + item.token_count, 0)
-  const totalPrice = response.data.reduce((sum, item) => sum + item.total_price, 0)
 
   if (noDataFlag) {
     return <Chart
@@ -605,17 +600,7 @@ export const WorkflowCostByModelChart: FC<IBizChartProps> = ({ id, period }) => 
       <div className='mb-4 flex-1'>
         <Basic
           name={`${totalTokens.toLocaleString()} tokens`}
-          type={
-            <span>
-              <span className='ml-1 text-text-tertiary'>(</span>
-              <span className='text-orange-400'>~${totalPrice.toLocaleString('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 4,
-              })}</span>
-              <span className='text-text-tertiary'>)</span>
-            </span>
-          }
+          type={period.name}
           textStyle={{ main: `!text-3xl !font-normal ${totalTokens === 0 ? '!text-text-quaternary' : ''}` }}
         />
       </div>

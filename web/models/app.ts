@@ -176,8 +176,6 @@ export type WorkflowTokenCostsByModelResponse = {
     model_provider: string
     model_id: string
     token_count: number
-    total_price: number
-    currency: string
   }>
 }
 
@@ -189,6 +187,5 @@ export type ModelUsageData = {
   data: Array<{
     date: string
     token_count: number
-    total_price: number
   }>
 }
