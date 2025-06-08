@@ -24,16 +24,16 @@ WorkflowCostByModelChart機能の実装を段階的に進めるためのTODOリ�
   - Message モデルの `model_provider`, `model_id`, `workflow_run_id`, `message_tokens`, `answer_tokens`, `total_price` フィールド確認
   - ワークフロー関連のリレーションシップ確認
 
-## Phase 2: フロントエンド型定義
+## Phase 2: フロントエンド型定義 ✅ 完了
 
 ### 🔴 高優先度
 
-- [ ] **フロントエンド: /web/models/app.ts に WorkflowTokenCostsByModelResponse と ModelUsageData 型定義を追加**
+- [x] **フロントエンド: /web/models/app.ts に WorkflowTokenCostsByModelResponse と ModelUsageData 型定義を追加** ✅
   - `WorkflowTokenCostsByModelResponse` インターフェースを追加
   - `ModelUsageData` インターフェースを追加
   - 既存の型定義との整合性確認
 
-- [ ] **フロントエンド: /web/service/apps.ts に getWorkflowTokenCostsByModel 関数を追加**
+- [x] **フロントエンド: /web/service/apps.ts に getWorkflowTokenCostsByModel 関数を追加** ✅
   - SWR Fetcher パターンに従った API クライアント関数を実装
   - 型安全性の確保
   - エラーハンドリングの実装

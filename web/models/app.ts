@@ -168,3 +168,27 @@ export type TracingConfig = {
   tracing_provider: TracingProvider
   tracing_config: LangSmithConfig | LangFuseConfig | OpikConfig | WeaveConfig
 }
+
+// WorkflowCostByModelChart関連の型定義
+export type WorkflowTokenCostsByModelResponse = {
+  data: Array<{
+    date: string
+    model_provider: string
+    model_id: string
+    token_count: number
+    total_price: number
+    currency: string
+  }>
+}
+
+export type ModelUsageData = {
+  modelKey: string // `${model_provider}/${model_id}`の形式
+  model_provider: string
+  model_id: string
+  color: string
+  data: Array<{
+    date: string
+    token_count: number
+    total_price: number
+  }>
+}
