@@ -1,0 +1,23 @@
+# 作業ログ: モデルごとトークン使用量グラフの不具合修正
+
+## 2025/06/26
+
+### 1. `NameError` の修正
+
+- **問題:** APIエンドポイント `/apps/{appId}/workflow/statistics/token-costs-by-model` で `NameError: name 'arg_dict' is not defined` が発生。
+- **原因:** `api/controllers/console/app/workflow_statistic.py` の `WorkflowTokenCostByModelStatistic` クラス内で、変数 `arg_dict` が初期化される前に参照されていた。また、日付範囲のフィルタリングロジックが不完全だった。
+- **対応:**
+    - `arg_dict` を `app_id` のみで初期化。
+    - 日付範囲 (`start`, `end`) の条件を、リクエスト引数が存在する場合にのみ `sql_query` に追加するように修正。
+
+### 2. `ProgrammingError` (DBエラー) の修正
+
+- **問題:** `psycopg2.errors.UndefinedFunction: function jsonb_extract_path_text(text, unknown) does not exist` というDBエラーが発生。
+- **原因:** `workflow_node_executions` テーブルの `execution_metadata` カラムが `text` 型として解釈されており、`jsonb` 型用の関数が使用できなかった。
+- **対応:** SQLクエリ内で `execution_metadata` を `CAST(execution_metadata AS jsonb)` を使って明示的に `jsonb` 型にキャストするように修正。
+
+### 3. APIレスポンスの `model_name` が `None` になる問題の修正
+
+- **問題:** APIのレスポンスで `model_name` が `"None"` として返され、正しいモデル名が取得できていなかった。
+- **原因:** `execution_metadata` に格納されているJSONデータでは、モデル名やトークン数は `llm_usage` というキーの中にネストされて格納されていた。しかし、クエリはこれらの情報がトップレベルに存在すると想定していたため、値を抽出できていなかった。
+- **対応:** `jsonb_extract_path_text` のパスを修正し、`['llm_usage', 'model_name']` および `['llm_usage', 'total_tokens']` のように、ネストされたJSONオブジェクトから正しく値を抽出するように変更。

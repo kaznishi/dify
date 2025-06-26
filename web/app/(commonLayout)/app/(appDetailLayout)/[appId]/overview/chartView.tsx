@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import quarterOfYear from 'dayjs/plugin/quarterOfYear'
 import { useTranslation } from 'react-i18next'
 import type { PeriodParams } from '@/app/components/app/overview/appChart'
-import { AvgResponseTime, AvgSessionInteractions, AvgUserInteractions, ConversationsChart, CostChart, EndUsersChart, MessagesChart, TokenPerSecond, UserSatisfactionRate, WorkflowCostChart, WorkflowDailyTerminalsChart, WorkflowMessagesChart } from '@/app/components/app/overview/appChart'
+import { AvgResponseTime, AvgSessionInteractions, AvgUserInteractions, ConversationsChart, CostChart, EndUsersChart, MessagesChart, TokenPerSecond, UserSatisfactionRate, WorkflowCostByModelChart, WorkflowCostChart, WorkflowDailyTerminalsChart, WorkflowMessagesChart } from '@/app/components/app/overview/appChart'
 import type { Item } from '@/app/components/base/select'
 import { SimpleSelect } from '@/app/components/base/select'
 import { TIME_PERIOD_MAPPING } from '@/app/components/app/log/filter'
@@ -98,6 +98,7 @@ export default function ChartView({ appId }: IChartViewProps) {
       {isWorkflow && (
         <div className='mb-6 grid w-full grid-cols-1 gap-6 xl:grid-cols-2'>
           <WorkflowCostChart period={period} id={appId} />
+          <WorkflowCostByModelChart period={period} id={appId} />
           <AvgUserInteractions period={period} id={appId} />
         </div>
       )}
