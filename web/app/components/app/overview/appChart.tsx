@@ -12,7 +12,7 @@ import { formatNumber } from '@/utils/format'
 import Basic from '@/app/components/app-sidebar/basic'
 import Loading from '@/app/components/base/loading'
 import type { AppDailyConversationsResponse, AppDailyEndUsersResponse, AppDailyMessagesResponse, AppTokenCostsResponse } from '@/models/app'
-import { getAppDailyConversations, getAppDailyEndUsers, getAppDailyMessages, getAppStatistics, getAppTokenCosts, getWorkflowDailyConversations } from '@/service/apps'
+import { getAppDailyConversations, getAppDailyEndUsers, getAppDailyMessages, getAppStatistics, getAppTokenCosts, getWorkflowDailyConversations, getWorkflowTokenCostsByModel } from '@/service/apps'
 const valueFormatter = (v: string | number) => v
 
 const COLOR_TYPE_MAP = {
@@ -444,6 +444,21 @@ export const AvgUserInteractions: FC<IBizChartProps> = ({ id, period }) => {
     valueKey='interactions'
     isAvg
     {...(noDataFlag && { yMax: 500 })}
+  />
+}
+
+export const WorkflowCostByModelChart: FC<IBizChartProps> = ({ id, period }) => {
+  const { t } = useTranslation()
+
+  const { data: response } = useSWR({ url: `/apps/${id}/workflow/statistics/token-costs-by-model`, params: period.query }, getWorkflowTokenCostsByModel)
+  if (!response)
+    return <Loading />
+  const noDataFlag = !response.data || response.data.length === 0
+  return <Chart
+    basicInfo={{ title: t('appOverview.analysis.tokenUsage.title'), explanation: t('appOverview.analysis.tokenUsage.explanation'), timePeriod: period.name }}
+    chartData={!noDataFlag ? response : { data: getDefaultChartData(period.query ?? defaultPeriod) }}
+    chartType='workflowCosts'
+    {...(noDataFlag && { yMax: 100 })}
   />
 }
 

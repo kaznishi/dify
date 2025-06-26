@@ -207,6 +207,64 @@ WHERE
         return jsonify({"data": response_data})
 
 
+class WorkflowTokenCostByModelStatistic(Resource):
+    @setup_required
+    @login_required
+    @account_initialization_required
+    @get_app_model
+    def get(self, app_model):
+        parser = reqparse.RequestParser()
+        parser.add_argument("start", type=DatetimeString("%Y-%m-%d %H:%M"), location="args")
+        parser.add_argument("end", type=DatetimeString("%Y-%m-%d %H:%M"), location="args")
+        args = parser.parse_args()
+
+        sql_query = """SELECT
+    jsonb_extract_path_text(execution_metadata, 'model_name') AS model_name,
+    SUM(CAST(jsonb_extract_path_text(execution_metadata, 'total_tokens') AS integer)) AS total_tokens
+FROM
+    workflow_node_executions
+WHERE
+    app_id = :app_id
+    AND created_at >= :start
+    AND created_at < :end
+    AND node_type = 'llm'
+    AND status = 'succeeded'"""
+        
+        account = current_user
+        timezone = pytz.timezone(account.timezone)
+        utc_timezone = pytz.utc
+
+        if args["start"]:
+            start_datetime = datetime.strptime(args["start"], "%Y-%m-%d %H:%M")
+            start_datetime = start_datetime.replace(second=0)
+
+            start_datetime_timezone = timezone.localize(start_datetime)
+            start_datetime_utc = start_datetime_timezone.astimezone(utc_timezone)
+
+            sql_query += " AND created_at >= :start"
+            arg_dict["start"] = start_datetime_utc
+
+        if args["end"]:
+            end_datetime = datetime.strptime(args["end"], "%Y-%m-%d %H:%M")
+            end_datetime = end_datetime.replace(second=0)
+
+            end_datetime_timezone = timezone.localize(end_datetime)
+            end_datetime_utc = end_datetime_timezone.astimezone(utc_timezone)
+
+            sql_query += " AND created_at < :end"
+            arg_dict["end"] = end_datetime_utc
+
+        sql_query += " GROUP BY model_name ORDER BY total_tokens DESC"
+
+        response_data = []
+
+        with db.engine.begin() as conn:
+            rs = conn.execute(db.text(sql_query), arg_dict)
+            for i in rs:
+                response_data.append({"model_name": str(i.model_name), "total_tokens": i.total_tokens})
+
+        return jsonify({"data": response_data})
+
 class WorkflowAverageAppInteractionStatistic(Resource):
     @setup_required
     @login_required
@@ -289,6 +347,7 @@ GROUP BY
 api.add_resource(WorkflowDailyRunsStatistic, "/apps/<uuid:app_id>/workflow/statistics/daily-conversations")
 api.add_resource(WorkflowDailyTerminalsStatistic, "/apps/<uuid:app_id>/workflow/statistics/daily-terminals")
 api.add_resource(WorkflowDailyTokenCostStatistic, "/apps/<uuid:app_id>/workflow/statistics/token-costs")
+api.add_resource(WorkflowTokenCostByModelStatistic, "/apps/<uuid:app_id>/workflow/statistics/token-costs-by-model")
 api.add_resource(
     WorkflowAverageAppInteractionStatistic, "/apps/<uuid:app_id>/workflow/statistics/average-app-interactions"
 )

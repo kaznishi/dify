@@ -104,6 +104,10 @@ export const getAppTokenCosts: Fetcher<AppTokenCostsResponse, { url: string; par
   return get<AppTokenCostsResponse>(url, { params })
 }
 
+export const getWorkflowTokenCostsByModel: Fetcher<AppTokenCostsResponse, { url: string; params: Record<string, any> }> = ({ url, params }) => {
+  return get<AppTokenCostsResponse>(url, { params })
+}
+
 export const updateAppModelConfig: Fetcher<UpdateAppModelConfigResponse, { url: string; body: Record<string, any> }> = ({ url, body }) => {
   return post<UpdateAppModelConfigResponse>(url, { body })
 }
