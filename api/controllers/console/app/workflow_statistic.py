@@ -219,18 +219,22 @@ class WorkflowTokenCostByModelStatistic(Resource):
         args = parser.parse_args()
 
         sql_query = """SELECT
-    jsonb_extract_path_text(execution_metadata, 'model_name') AS model_name,
-    SUM(CAST(jsonb_extract_path_text(execution_metadata, 'total_tokens') AS integer)) AS total_tokens
+    jsonb_extract_path_text(CAST(execution_metadata AS jsonb), 'llm_usage', 'model_name') AS model_name,
+    SUM(
+        CAST(jsonb_extract_path_text(CAST(execution_metadata AS jsonb), 'llm_usage', 'total_tokens') AS integer)
+    ) AS total_tokens
 FROM
     workflow_node_executions
 WHERE
     app_id = :app_id
-    AND created_at >= :start
-    AND created_at < :end
     AND node_type = 'llm'
     AND status = 'succeeded'"""
-        
+
         account = current_user
+        arg_dict = {
+            "app_id": app_model.id,
+        }
+
         timezone = pytz.timezone(account.timezone)
         utc_timezone = pytz.utc
 
@@ -264,6 +268,7 @@ WHERE
                 response_data.append({"model_name": str(i.model_name), "total_tokens": i.total_tokens})
 
         return jsonify({"data": response_data})
+
 
 class WorkflowAverageAppInteractionStatistic(Resource):
     @setup_required
